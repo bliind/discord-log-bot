@@ -84,14 +84,12 @@ class LoggingCog(commands.Cog):
         files = []
         try:
             for file in message.attachments:
-                async with (
-                    aiohttp.ClientSession() as session,
-                    session.get(file.url) as resp
-                ):
-                    if resp.status != 200:
-                        raise Exception
-                    data = io.BytesIO(await resp.read())
-                    files.append(File(data, file.filename))
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(file.url) as resp:
+                        if resp.status != 200:
+                            raise Exception
+                        data = io.BytesIO(await resp.read())
+                        files.append(File(data, file.filename))
         except Exception:
             embed.description += f'\n_(There were {len(message.attachments)} images attached but discord deleted them already)_'
 
