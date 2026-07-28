@@ -1,0 +1,4 @@
+**/__pycache__
+nimrod.db
+.env*
+config/*
