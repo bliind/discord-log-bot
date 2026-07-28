@@ -1,4 +1,5 @@
 import datetime
+from typing import Union
 
 from discord import Color, Embed, Guild, Member, User
 
@@ -13,7 +14,7 @@ def timestamp():
     now = datetime.datetime.now(datetime.timezone.utc)
     return round(now.timestamp())
 
-def get_member_name(member: User|Member) -> str:
+def get_member_name(member: Union[Member,User]) -> str:
     attributes = ['nick', 'display_name', 'global_name']
     for attr in attributes:
         value = getattr(member, attr, None)
@@ -22,14 +23,14 @@ def get_member_name(member: User|Member) -> str:
 
     return member.name
 
-def get_member_image(member: User|Member) -> str|None:
+def get_member_image(member: Union[Member,User]) -> Union[str,None]:
     attributes = ['guild_avatar', 'display_avatar', 'avatar']
     for attr in attributes:
         value = getattr(member, attr, None)
         if value:
             return value.url
 
-def make_embed(color: str, member: Member|User|Guild, description: str = '', **kwargs) -> Embed:
+def make_embed(color: str, member: Union[Member,User,Guild], description: str = '', **kwargs) -> Embed:
     color_method = getattr(Color, color, Color.greyple)
     embed = Embed(
         color=color_method(),

@@ -1,4 +1,5 @@
 import json
+from typing import Union
 
 import aiofiles
 from discord import CategoryChannel, ForumChannel, Interaction, TextChannel, app_commands
@@ -20,7 +21,7 @@ class ConfigCog(commands.Cog):
             "voice_logs_channel": "Voice Logs",
         }
 
-    async def write_log_file(self, guild_id: int|None, config):
+    async def write_log_file(self, guild_id: Union[int,None], config):
         if not guild_id:
             return
 
@@ -49,7 +50,7 @@ class ConfigCog(commands.Cog):
         return out
 
     @app_commands.command(name='add_nolog_channel', description='Add a channel to not be logged')
-    async def add_nolog_channel_command(self, interaction: Interaction, channel: CategoryChannel|ForumChannel|TextChannel):
+    async def add_nolog_channel_command(self, interaction: Interaction, channel: Union[CategoryChannel,ForumChannel,TextChannel]):
         await interaction.response.defer(ephemeral=True)
         current_config = self.bot.config[interaction.guild_id]
         current_config['no_log_channels'].append(channel.id)

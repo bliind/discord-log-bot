@@ -1,4 +1,5 @@
 import io
+from typing import Union
 
 import aiohttp
 from discord import File, Guild, Member, Message, RawMemberRemoveEvent, Thread, User
@@ -218,14 +219,14 @@ class LoggingCog(commands.Cog):
         await self.log_role_updates(before, after)
 
     @commands.Cog.listener()
-    async def on_member_ban(self, guild: Guild, user: User|Member):
+    async def on_member_ban(self, guild: Guild, user: Union[User,Member]):
         embed = make_embed('red', user, f'{user.mention} has been banned.')
         log_channel = self.bot.get_channel(self.bot.config[guild.id].mod_logs_channel)
         if log_channel:
             await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
-    async def on_member_unban(self, guild: Guild, user: User|Member):
+    async def on_member_unban(self, guild: Guild, user: Union[User,Member]):
         embed = make_embed('green', user, f'{user.mention} has been unbanned.')
         log_channel = self.bot.get_channel(self.bot.config[guild.id].mod_logs_channel)
         if log_channel:
