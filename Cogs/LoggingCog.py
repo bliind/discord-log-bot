@@ -1,5 +1,4 @@
 import io
-from typing import Union
 
 import aiohttp
 from discord import File, Guild, Member, Message, RawMemberRemoveEvent, Thread, User
@@ -84,12 +83,14 @@ class LoggingCog(commands.Cog):
         files = []
         try:
             for file in message.attachments:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(file.url) as resp:
-                        if resp.status != 200:
-                            raise Exception
-                        data = io.BytesIO(await resp.read())
-                        files.append(File(data, file.filename))
+                async with (
+                    aiohttp.ClientSession() as session,
+                    session.get(file.url) as resp
+                ):
+                    if resp.status != 200:
+                        raise Exception
+                    data = io.BytesIO(await resp.read())
+                    files.append(File(data, file.filename))
         except Exception:
             embed.description += f'\n_(There were {len(message.attachments)} images attached but discord deleted them already)_'
 
@@ -217,14 +218,14 @@ class LoggingCog(commands.Cog):
         await self.log_role_updates(before, after)
 
     @commands.Cog.listener()
-    async def on_member_ban(self, guild: Guild, user: Union[User,Member]):
+    async def on_member_ban(self, guild: Guild, user: User|Member):
         embed = make_embed('red', user, f'{user.mention} has been banned.')
         log_channel = self.bot.get_channel(self.bot.config[guild.id].mod_logs_channel)
         if log_channel:
             await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
-    async def on_member_unban(self, guild: Guild, user: Union[User,Member]):
+    async def on_member_unban(self, guild: Guild, user: User|Member):
         embed = make_embed('green', user, f'{user.mention} has been unbanned.')
         log_channel = self.bot.get_channel(self.bot.config[guild.id].mod_logs_channel)
         if log_channel:
