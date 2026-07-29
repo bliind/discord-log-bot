@@ -55,28 +55,46 @@ class LoggingCog(commands.Cog):
         if isinstance(channel, discord.StageChannel):
             return 'Stage'
 
+    def get_log_channel(self, guild_id: int, log_type: str):
+        try:
+            log_channel_id = self.bot.config[guild_id][log_type]
+            log_channel = self.bot.get_channel(log_channel_id)
+            assert log_channel
+        except Exception:
+            return False
+
+        return log_channel
+
     @commands.Cog.listener()
     async def on_raw_member_remove(self, event: RawMemberRemoveEvent):
+        log_channel = self.get_log_channel(event.guild_id, "user_logs_channel")
+        if not log_channel:
+            return
+
         embed = make_embed('red', event.user, f'{event.user.mention} left.')
-        channel = self.bot.get_channel(self.bot.config[event.guild_id].user_logs_channel)
-        if channel:
-            await channel.send(embed=embed)
+        await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: Member):
+        log_channel = self.get_log_channel(member.guild.id, "user_logs_channel")
+        if not log_channel:
+            return
+
         created = round(int(member.created_at.timestamp()))
         description = f'{member.mention} joined.' \
-                      f'\n\nAccount created <t:{created}:f>' \
-                      f'\n(Roughly <t:{created}:R>'
+                    f'\n\nAccount created <t:{created}:f>' \
+                    f'\n(Roughly <t:{created}:R>)'
 
         embed = make_embed('green', member, description)
-        channel = self.bot.get_channel(self.bot.config[member.guild.id].user_logs_channel)
-        if channel:
-            await channel.send(embed=embed)
+        await log_channel.send(embed=embed)
 
     # handles on_message_delete, on_thread_delete, and on_bulk_message_delete
     async def log_delete(self, message: Message, thread: bool = False, bulk: bool = False):
         if not message.guild:
+            return
+
+        log_channel = self.get_log_channel(message.guild.id, "message_deletes_channel")
+        if not log_channel:
             return
 
         # skip bot messages
@@ -141,9 +159,7 @@ class LoggingCog(commands.Cog):
                         files.append(File(data, f'{message.stickers[0].name}.png'))
                 embed.description += '\n_(Above sticker was attached)_'
 
-        log_channel = self.bot.get_channel(self.bot.config[message.guild.id].message_deletes_channel)
-        if log_channel:
-            await log_channel.send(embed=embed, files=files)
+        await log_channel.send(embed=embed, files=files)
 
     @commands.Cog.listener()
     async def on_message_delete(self, message: Message):
@@ -162,6 +178,10 @@ class LoggingCog(commands.Cog):
     @commands.Cog.listener()
     async def on_message_edit(self, before: Message, after: Message):
         if not after.guild:
+            return
+
+        log_channel = self.get_log_channel(after.guild.id, "message_edits_channel")
+        if not log_channel:
             return
 
         # skip bot messages
@@ -187,11 +207,13 @@ class LoggingCog(commands.Cog):
             url=after.jump_url
         )
 
-        log_channel = self.bot.get_channel(self.bot.config[after.guild.id].message_edits_channel)
-        if log_channel:
-            await log_channel.send(embed=embed)
+        await log_channel.send(embed=embed)
 
     async def log_member_changes(self, before: Member, after: Member):
+        log_channel = self.get_log_channel(after.guild.id, "user_logs_channel")
+        if not log_channel:
+            return
+
         description = f'{after.mention} has been updated.\n'
         send = False
 
@@ -217,11 +239,13 @@ class LoggingCog(commands.Cog):
         # only send an update if something we cared about changed
         if send:
             change_embed = make_embed('blue', after, description)
-            log_channel = self.bot.get_channel(self.bot.config[after.guild.id].user_logs_channel)
-            if log_channel:
-                await log_channel.send(embed=change_embed)
+            await log_channel.send(embed=change_embed)
 
     async def log_role_updates(self, before: Member, after: Member):
+        log_channel = self.get_log_channel(after.guild.id, "user_logs_channel")
+        if not log_channel:
+            return
+
         description = f'{after.mention} has been updated.\n'
 
         b_roles = [r.name for r in before.roles]
@@ -240,9 +264,7 @@ class LoggingCog(commands.Cog):
                 description += f'\n⛔ {role_name}'
 
         role_embed = make_embed('blue', after, description)
-        log_channel = self.bot.get_channel(self.bot.config[after.guild.id].user_logs_channel)
-        if log_channel:
-            await log_channel.send(embed=role_embed)
+        await log_channel.send(embed=role_embed)
 
     @commands.Cog.listener()
     async def on_member_update(self, before: Member, after: Member):
@@ -254,48 +276,56 @@ class LoggingCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild: Guild, user: User|Member):
+        log_channel = self.get_log_channel(guild.id, "mod_logs_channel")
+        if not log_channel:
+            return
+
         embed = make_embed('red', user, f'{user.mention} has been banned.')
-        log_channel = self.bot.get_channel(self.bot.config[guild.id].mod_logs_channel)
-        if log_channel:
-            await log_channel.send(embed=embed)
+        await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild: Guild, user: User|Member):
+        log_channel = self.get_log_channel(guild.id, "mod_logs_channel")
+        if not log_channel:
+            return
+
         embed = make_embed('green', user, f'{user.mention} has been unbanned.')
-        log_channel = self.bot.get_channel(self.bot.config[guild.id].mod_logs_channel)
-        if log_channel:
-            await log_channel.send(embed=embed)
+        await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel: discord.abc.GuildChannel):
-        log_channel = self.bot.get_channel(self.bot.config[channel.guild.id].server_logs_channel)
-        if log_channel:
-            channel_type = self.get_channel_type(channel)
-            description = f'Channel created: {channel.jump_url}'
-            description += f'\n\n- **Name**: {channel.name}'
-            description += f'\n- **Type**: {channel_type}'
-            if channel.category:
-                description += f'\n- **Category**: {channel.category.name}'
-            description += f'\n- **ID**: {channel.id}'
-            embed = make_embed('green', channel.guild, description)
-            await log_channel.send(embed=embed)
+        log_channel = self.get_log_channel(channel.guild.id, "server_logs_channel")
+        if not log_channel:
+            return
+
+        channel_type = self.get_channel_type(channel)
+        description = f'Channel created: {channel.jump_url}'
+        description += f'\n\n- **Name**: {channel.name}'
+        description += f'\n- **Type**: {channel_type}'
+        if channel.category:
+            description += f'\n- **Category**: {channel.category.name}'
+        description += f'\n- **ID**: {channel.id}'
+        embed = make_embed('green', channel.guild, description)
+        await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
-        log_channel = self.bot.get_channel(self.bot.config[channel.guild.id].server_logs_channel)
-        if log_channel:
-            channel_type = self.get_channel_type(channel)
-            description = f'Channel deleted: {channel.name}'
-            description += f'\n\n- **Type**: {channel_type}'
-            if channel.category:
-                description += f'\n- **Category**: {channel.category.name}'
-            description += f'\n- **ID**: {channel.id}'
-            embed = make_embed('red', channel.guild, description)
-            await log_channel.send(embed=embed)
+        log_channel = self.get_log_channel(channel.guild.id, "server_logs_channel")
+        if not log_channel:
+            return
+
+        channel_type = self.get_channel_type(channel)
+        description = f'Channel deleted: {channel.name}'
+        description += f'\n\n- **Type**: {channel_type}'
+        if channel.category:
+            description += f'\n- **Category**: {channel.category.name}'
+        description += f'\n- **ID**: {channel.id}'
+        embed = make_embed('red', channel.guild, description)
+        await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_channel_update(self, before, after):
-        log_channel = self.bot.get_channel(self.bot.config[after.guild.id].server_logs_channel)
+        log_channel = self.get_log_channel(after.guild.id, "server_logs_channel")
         if not log_channel:
             return
 
@@ -338,33 +368,46 @@ class LoggingCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role):
-        log_channel = self.bot.get_channel(self.bot.config[role.guild.id].role_updates_channel)
-        if log_channel:
-            embed = make_embed('green', role.guild, f'Role created: {role.mention}')
-            await log_channel.send(embed=embed)
+        log_channel = self.get_log_channel(role.guild.id, "role_updates_channel")
+        if not log_channel:
+            return
+
+        embed = make_embed('green', role.guild, f'Role created: {role.mention}')
+        await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role):
-        log_channel = self.bot.get_channel(self.bot.config[role.guild.id].role_updates_channel)
-        if log_channel:
-            embed = make_embed('red', role.guild, f'Role deleted: {role.name} ({role.id})')
-            await log_channel.send(embed=embed)
+        log_channel = self.get_log_channel(role.guild.id, "role_updates_channel")
+        if not log_channel:
+            return
+
+        embed = make_embed('red', role.guild, f'Role deleted: {role.name} ({role.id})')
+        await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_role_update(self, before, after):
+        log_channel = self.get_log_channel(after.guild.id, "role_updates_channel")
+        if not log_channel:
+            return
+
         description = f'**Role updated: {after.mention}**\n'
         thumb = None
+        send = False
 
         if before.name != after.name:
             description += f'\n- Name changed from `{before.name}` to `{after.name}`'
+            send = True
         if before.icon != after.icon:
             description += '\n- Role icon changed'
+            send = True
         if after.icon and after.icon.url:
             thumb = after.icon.url
+            send = True
         if before.color != after.color:
             bc = '#%02x%02x%02x' % before.color.to_rgb()
             ac = '#%02x%02x%02x' % after.color.to_rgb()
             description += f'\n- Color changed from `{bc}` to `{ac}`'
+            send = True
 
         bp = {}
         changes = {}
@@ -376,26 +419,29 @@ class LoggingCog(commands.Cog):
 
         emojis = {True: ':white_check_mark:', False: ':no_entry:', None: ':white_large_square:'}
         if len(changes) > 0:
+            send = True
             description += '\n- Permissions updated:'
             for perm, access in changes.items():
                 p = perm.replace('_', ' ').capitalize()
                 description += f'\n{emojis[access]} {p}'
 
-        if '\n\n' in description:
+        if send:
             embed = make_embed('blurple', after.guild, description)
             if thumb:
                 embed.set_thumbnail(url=thumb)
-            log_channel = self.bot.get_channel(self.bot.config[after.guild.id].role_updates_channel)
-            if log_channel:
-                await log_channel.send(embed=embed)
+
+            await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: Member, before, after):
         if before.channel == after.channel:
             return
 
-        log_channel = self.bot.get_channel(self.bot.config[member.guild.id].voice_logs_channel)
+        log_channel = self.get_log_channel(member.guild.id, "voice_logs_channel")
         if not log_channel:
+            return
+
+        if (after.channel and self.check_no_log(after.channel)) or (before.channel and self.check_no_log(before.channel)):
             return
 
         if not before.channel:
