@@ -6,8 +6,8 @@ import aiofiles
 import discord
 from discord.ext import commands
 
-from Cogs.ConfigCog import ConfigCog
 from Cogs.LoggingCog import LoggingCog
+from Cogs.VoiceMakerCog import VoiceMakerCog
 from utility import dotdict
 
 
@@ -17,24 +17,24 @@ class MyBot(commands.Bot):
         intents = discord.Intents.default()
         intents.message_content = True
         intents.members = True
-        super().__init__(command_prefix='¤', intents=intents)
+        super().__init__(command_prefix="¤", intents=intents)
         self.synced = False
         self.use_cogs = use_cogs
         self.config = {}
 
-    async def load_config(self, guild: int|None = None):
+    async def load_config(self, guild: int | None = None):
         if guild:
-            config_files = [f'./config/{guild}.json']
+            config_files = [f"./config/{guild}.json"]
         else:
-            config_files = glob('./config/*.json')
+            config_files = glob("./config/*.json")
 
         for config_file in config_files:
             guild_id = os.path.splitext(os.path.basename(config_file))[0]
             try:
                 guild_id = int(guild_id)
             except ValueError as e:
-                print(f'Failed to parse guild_id: {e}')
-            async with aiofiles.open(config_file, mode='r', encoding='utf-8') as file:
+                print(f"Failed to parse guild_id: {e}")
+            async with aiofiles.open(config_file, mode="r", encoding="utf-8") as file:
                 content = await file.read()
             config_data = json.loads(content)
             self.config[guild_id] = dotdict(config_data)
@@ -44,8 +44,8 @@ class MyBot(commands.Bot):
         if not config:
             return
 
-        config_file = f'./config/{guild_id}.json'
-        async with aiofiles.open(config_file, mode='w', encoding='utf-8') as file:
+        config_file = f"./config/{guild_id}.json"
+        async with aiofiles.open(config_file, mode="w", encoding="utf-8") as file:
             await file.write(json.dumps(config, indent=4))
 
     async def setup_hook(self):
@@ -61,11 +61,9 @@ class MyBot(commands.Bot):
         await self.tree.sync()
         self.synced = True
 
-        print('Bot ready to go!')
+        print("Bot ready to go!")
 
-use_cogs = [
-    ConfigCog,
-    LoggingCog
-]
+
+use_cogs = [LoggingCog, VoiceMakerCog]
 bot = MyBot(use_cogs)
-bot.run(os.getenv('BOT_TOKEN', ''))
+bot.run(os.getenv("BOT_TOKEN", ""))
