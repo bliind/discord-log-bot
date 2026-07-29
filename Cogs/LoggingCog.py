@@ -1,6 +1,7 @@
 import io
 
 import aiohttp
+import discord
 from discord import File, Guild, Member, Message, RawMemberRemoveEvent, Thread, User
 from discord.ext import commands
 
@@ -19,6 +20,18 @@ class LoggingCog(commands.Cog):
             return True
         if getattr(channel, 'parent_id', None) in no_log:
             return True
+
+    def get_channel_type(self, channel: discord.abc.GuildChannel):
+        if isinstance(channel, discord.TextChannel):
+            return 'Text'
+        if isinstance(channel, discord.VoiceChannel):
+            return 'Voice'
+        if isinstance(channel, discord.CategoryChannel):
+            return 'Category'
+        if isinstance(channel, discord.ForumChannel):
+            return 'Forum'
+        if isinstance(channel, discord.StageChannel):
+            return 'Stage'
 
     @commands.Cog.listener()
     async def on_raw_member_remove(self, event: RawMemberRemoveEvent):
@@ -232,17 +245,30 @@ class LoggingCog(commands.Cog):
             await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
-    async def on_guild_channel_create(self, channel):
+    async def on_guild_channel_create(self, channel: discord.abc.GuildChannel):
         log_channel = self.bot.get_channel(self.bot.config[channel.guild.id].server_logs_channel)
         if log_channel:
-            embed = make_embed('green', channel.guild, f'Channel created: {channel.name} ({channel.id})')
+            channel_type = self.get_channel_type(channel)
+            description = f'Channel created: {channel.jump_url}'
+            description += f'\n\n- **Name**: {channel.name}'
+            description += f'\n- **Type**: {channel_type}'
+            if channel.category:
+                description += f'\n- **Category**: {channel.category.name}'
+            description += f'\n- **ID**: {channel.id}'
+            embed = make_embed('green', channel.guild, description)
             await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
         log_channel = self.bot.get_channel(self.bot.config[channel.guild.id].server_logs_channel)
         if log_channel:
-            embed = make_embed('red', channel.guild, f'Channel deleted: {channel.name} ({channel.id})')
+            channel_type = self.get_channel_type(channel)
+            description = f'Channel deleted: {channel.name}'
+            description += f'\n\n- **Type**: {channel_type}'
+            if channel.category:
+                description += f'\n- **Category**: {channel.category.name}'
+            description += f'\n- **ID**: {channel.id}'
+            embed = make_embed('red', channel.guild, description)
             await log_channel.send(embed=embed)
 
     @commands.Cog.listener()

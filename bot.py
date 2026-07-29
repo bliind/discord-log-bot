@@ -22,8 +22,13 @@ class MyBot(commands.Bot):
         self.use_cogs = use_cogs
         self.config = {}
 
-    async def setup_hook(self):
-        for config_file in glob('./config/*.json'):
+    async def load_config(self, guild: int|None = None):
+        if guild:
+            config_files = [f'./config/{guild}.json']
+        else:
+            config_files = glob('./config/*.json')
+
+        for config_file in config_files:
             guild_id = os.path.splitext(os.path.basename(config_file))[0]
             try:
                 guild_id = int(guild_id)
@@ -33,6 +38,18 @@ class MyBot(commands.Bot):
                 content = await file.read()
             config_data = json.loads(content)
             self.config[guild_id] = dotdict(config_data)
+
+    async def write_config_file(self, guild_id: int):
+        config = self.config[guild_id]
+        if not config:
+            return
+
+        config_file = f'./config/{guild_id}.json'
+        async with aiofiles.open(config_file, mode='w', encoding='utf-8') as file:
+            await file.write(json.dumps(config, indent=4))
+
+    async def setup_hook(self):
+        await self.load_config()
 
         for use_cog in self.use_cogs:
             await self.add_cog(use_cog(self))

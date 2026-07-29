@@ -1,6 +1,5 @@
 import json
 
-import aiofiles
 from discord import CategoryChannel, ForumChannel, Interaction, TextChannel, app_commands
 from discord.ext import commands
 
@@ -20,21 +19,13 @@ class ConfigCog(commands.Cog):
             "voice_logs_channel": "Voice Logs",
         }
 
-    async def write_log_file(self, guild_id: int|None, config):
-        if not guild_id:
-            return
-
-        config_file = f'./config/{guild_id}.json'
-        async with aiofiles.open(config_file, mode='w', encoding='utf-8') as file:
-            await file.write(json.dumps(config, indent=4))
-
     @app_commands.command(name='set_log_channel', description='Set the channel for a type of logs')
     async def set_log_channel_command(self, interaction: Interaction, log_type: str, channel: TextChannel):
         await interaction.response.defer(ephemeral=True)
         current_config = self.bot.config[interaction.guild_id]
         current_config[log_type] = channel.id
 
-        await self.write_log_file(interaction.guild_id, current_config)
+        await self.bot.write_config_file(interaction.guild_id)
 
         response = make_embed('green', self.bot.user, '', title='Log channel updated')
         response.add_field(name=log_type, value=channel.mention, inline=False)
@@ -54,7 +45,7 @@ class ConfigCog(commands.Cog):
         current_config = self.bot.config[interaction.guild_id]
         current_config['no_log_channels'].append(channel.id)
 
-        await self.write_log_file(interaction.guild_id, current_config)
+        await self.bot.write_config_file(interaction.guild_id)
 
         response = make_embed('green', self.bot.user, '', title='No log channel added')
         response.add_field(name='Channel added', value=channel.mention, inline=False)
@@ -64,12 +55,12 @@ class ConfigCog(commands.Cog):
     async def remove_nolog_channel_command(self, interaction: Interaction, channel: str):
         await interaction.response.defer(ephemeral=True)
         current_config = self.bot.config[interaction.guild_id]
-        current_config['no_log_channels'].append(channel.id)
+        current_config['no_log_channels'].append(channel)
 
-        await self.write_log_file(interaction.guild_id, current_config)
+        await self.bot.write_config_file(interaction.guild_id)
 
         response = make_embed('green', self.bot.user, '', title='No log channel added')
-        response.add_field(name='Channel added', value=channel.mention, inline=False)
+        response.add_field(name='Channel added', value=channel, inline=False)
         await interaction.followup.send(embed=response)
 
     @remove_nolog_channel_command.autocomplete('channel')
