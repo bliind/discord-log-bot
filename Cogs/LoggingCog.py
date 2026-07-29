@@ -239,7 +239,7 @@ class LoggingCog(commands.Cog):
             await log_channel.send(embed=change_embed)
 
     async def log_role_updates(self, before: Member, after: Member):
-        log_channel = self.get_log_channel(after.guild.id, "user_logs_channel")
+        log_channel = self.get_log_channel(after.guild.id, "role_updates_channel")
         if not log_channel:
             return
 
