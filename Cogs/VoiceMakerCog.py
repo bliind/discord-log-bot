@@ -23,8 +23,9 @@ class VoiceMakerCog(commands.Cog):
         vc_creation_channel = self.bot.config[member.guild.id].vc_creation_channel
         vc_creation_category = self.bot.config[member.guild.id].vc_creation_category
 
-        if not created_voice_channels:
-            created_voice_channels = []
+        if created_voice_channels == None:
+            self.bot.config[member.guild.id].created_voice_channels = []
+            created_voice_channels = self.bot.config[member.guild.id].created_voice_channels
 
         if after.channel and after.channel.id == vc_creation_channel:
             if vc_creation_category:
