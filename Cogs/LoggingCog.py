@@ -43,17 +43,17 @@ class LoggingCog(commands.Cog):
         if getattr(channel, 'parent_id', None) in no_log:
             return True
 
-    def get_channel_type(self, channel: discord.abc.GuildChannel):
+    def get_channel_type(self, channel: discord.abc.GuildChannel, symbol: bool = False):
         if isinstance(channel, discord.TextChannel):
-            return 'Text'
+            return '📄' if symbol else 'Text'
         if isinstance(channel, discord.VoiceChannel):
-            return 'Voice'
+            return '🎤' if symbol else 'Voice'
         if isinstance(channel, discord.CategoryChannel):
-            return 'Category'
+            return '📁' if symbol else 'Category'
         if isinstance(channel, discord.ForumChannel):
-            return 'Forum'
+            return '💬' if symbol else 'Forum'
         if isinstance(channel, discord.StageChannel):
-            return 'Stage'
+            return '🎭' if symbol else 'Stage'
 
     def get_log_channel(self, guild_id: int, log_type: str):
         try:
@@ -299,9 +299,8 @@ class LoggingCog(commands.Cog):
             return
 
         channel_type = self.get_channel_type(channel)
-        description = f'Channel created: {channel.jump_url}'
+        description = f'### {channel_type} Channel created: {channel.jump_url}'
         description += f'\n\n- **Name**: {channel.name}'
-        description += f'\n- **Type**: {channel_type}'
         if channel.category:
             description += f'\n- **Category**: {channel.category.name}'
         description += f'\n- **ID**: {channel.id}'
@@ -315,8 +314,7 @@ class LoggingCog(commands.Cog):
             return
 
         channel_type = self.get_channel_type(channel)
-        description = f'Channel deleted: {channel.name}'
-        description += f'\n\n- **Type**: {channel_type}'
+        description = f'### {channel_type} Channel deleted: {channel.name}'
         if channel.category:
             description += f'\n- **Category**: {channel.category.name}'
         description += f'\n- **ID**: {channel.id}'
@@ -340,7 +338,11 @@ class LoggingCog(commands.Cog):
                 befores[role.name][bo[0]] = bo[1]
 
         final = {}
-        description = f'### Channel <#{after.id}> updated:'
+        channel_type = self.get_channel_type(after)
+        description = f'### {channel_type} Channel {after.jump_url} updated:'
+
+        if before.name != after.name:
+            description += f'\n\nName changed from `{before.name}` to `{after.name}`'
 
         for role, perms in overwrites.items():
             for perm, access in perms.items():
@@ -359,8 +361,17 @@ class LoggingCog(commands.Cog):
                 pr = p.replace('_', ' ').capitalize()
                 description += f'\n{emojis[a]} {pr}'
 
-        if before.slowmode_delay != after.slowmode_delay:
+        if getattr(after, 'slowmode_delay', None) and before.slowmode_delay != after.slowmode_delay:
             description += f'\n\n### Slowmode updated:\n{before.slowmode_delay} seconds -> {after.slowmode_delay} seconds'
+
+        if (getattr(after, 'user_limit', None) or getattr(before, 'user_limit', None)) and before.user_limit != after.user_limit:
+            if after.user_limit == 0:
+                description += f'\n\nUser limit removed (was {before.user_limit})'
+            elif before.user_limit == 0:
+                description += f'\n\nUser limit set to {after.user_limit}'
+            else:
+                change = 'increased' if before.user_limit < after.user_limit else 'decreased'
+                description += f'\n\nUser limit {change} from {before.user_limit} to {after.user_limit}'
 
         if '\n' in description:
             embed = make_embed('blurple', after.guild, description)
