@@ -60,7 +60,7 @@ class LoggingCog(commands.Cog):
             log_channel_id = self.bot.config[guild_id][log_type]
             log_channel = self.bot.get_channel(log_channel_id)
             assert log_channel
-        except Exception:
+        except (IndexError, KeyError):
             return False
 
         return log_channel
@@ -134,17 +134,14 @@ class LoggingCog(commands.Cog):
 
         # now to (try to) log images attached
         files = []
-        try:
-            for file in message.attachments:
-                async with (
-                    aiohttp.ClientSession() as session,
-                    session.get(file.url) as resp
-                ):
-                    if resp.status != 200:
-                        raise Exception
-                    data = io.BytesIO(await resp.read())
-                    files.append(File(data, file.filename))
-        except Exception:
+        failed_download = False
+        for file in message.attachments:
+            try:
+                files.append(await file.to_file(spoiler=file.is_spoiler(), use_cached=True))
+            except (discord.Forbidden, discord.HTTPException, discord.NotFound):
+                failed_download = True
+
+        if failed_download:
             embed.description += f'\n_(There were {len(message.attachments)} images attached but discord deleted them already)_'
 
         if files:
@@ -346,8 +343,10 @@ class LoggingCog(commands.Cog):
 
         for role, perms in overwrites.items():
             for perm, access in perms.items():
-                try: old = befores[role][perm]
-                except: old = None
+                try:
+                    old = befores[role][perm]
+                except (KeyError, IndexError):
+                    old = None
                 if old != access:
                     final[role] = {}
                     final[role][perm] = access
@@ -415,8 +414,8 @@ class LoggingCog(commands.Cog):
             thumb = after.icon.url
             send = True
         if before.color != after.color:
-            bc = '#%02x%02x%02x' % before.color.to_rgb()
-            ac = '#%02x%02x%02x' % after.color.to_rgb()
+            bc = '#{:02x}{:02x}{:02x}'.format(*before.color.to_rgb())
+            ac = '#{:02x}{:02x}{:02x}'.format(*after.color.to_rgb())
             description += f'\n- Color changed from `{bc}` to `{ac}`'
             send = True
 
