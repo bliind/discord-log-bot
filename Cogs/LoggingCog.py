@@ -250,6 +250,9 @@ class LoggingCog(commands.Cog):
         added = [r for r in a_roles if r not in b_roles]
         removed = [r for r in b_roles if r not in a_roles]
 
+        if not added and not removed:
+            return
+
         if added:
             description += '\nRoles added:'
             for role_name in added:
