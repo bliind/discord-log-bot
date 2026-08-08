@@ -87,7 +87,7 @@ class AntiSpamCog(commands.Cog):
         log_channel = discord.utils.get(guild.text_channels, id=config.report_channel)
         mod_role = discord.utils.get(guild.roles, id=config.moderator_role)
 
-        report_view = ReportView(timeout=None)
+        report_view = ReportView(button_label='Ban User', timeout=None)
         if log_channel:
             channels_str = ', '.join(channels_hit)
             title = 'Automated Spam Detection'
