@@ -6,6 +6,7 @@ import aiofiles
 import discord
 from discord.ext import commands
 
+from Cogs.AntiSpamCog import AntiSpamCog
 from Cogs.LoggingCog import LoggingCog
 from Cogs.VoiceMakerCog import VoiceMakerCog
 from utility import dotdict
@@ -64,6 +65,6 @@ class MyBot(commands.Bot):
         print("Bot ready to go!")
 
 
-use_cogs = [LoggingCog, VoiceMakerCog]
+use_cogs = [AntiSpamCog, LoggingCog, VoiceMakerCog]
 bot = MyBot(use_cogs)
 bot.run(os.getenv("BOT_TOKEN", ""))
