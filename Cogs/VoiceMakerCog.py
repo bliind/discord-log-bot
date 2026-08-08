@@ -42,11 +42,8 @@ class VoiceMakerCog(commands.Cog):
                 created_voice_channels.append(new_channel.id)
 
                 await self.bot.write_config_file(member.guild.id)
-        elif (
-            not after.channel
-            and before.channel
-            and before.channel.id in created_voice_channels
-        ):
+
+        if before.channel and before.channel.id in created_voice_channels:
             voice_channel = self.bot.get_channel(before.channel.id)
             if voice_channel and len(voice_channel.members) == 0:
                 await voice_channel.delete(reason="Empty user-made voice channel")
